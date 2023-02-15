@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from multiprocessing import Process
 from rest_framework.generics import GenericAPIView
 from tools.permissions import ReviewPermission
+from advisors import gitee
+from advisors.review_tool import find_review_comment
 
 
 logger = logging.getLogger('log')
@@ -62,6 +64,67 @@ class ReviewView(GenericAPIView):
             logger.info('Notice Pull Request comment')
             comment = data['comment']['body']
             logger.info('Comment Body: {}'.format(comment))
+            if '/lgtm' in comment.split('\n'):
+                user_gitee = gitee.Gitee()
+                owner, repo, number = pr_url.split('/')[3], pr_url.split('/')[4], pr_url.split('/')[6]
+                latest_review_comment = find_review_comment(user_gitee, owner, repo, number)
+                latest_review_comment_id = latest_review_comment['id']
+                commenter = data['comment']['user']['login']
+                edit_nums = []
+                pr_lgtm_lst = get_pr_lgtm_lst(user_gitee, owner, repo, number, latest_review_comment_id)
+                items = latest_review_comment['body'].splitlines()
+                for item in items:
+                    if ('@' + commenter) in item:
+                        if '移交' in item:
+                            period = item.split('|')[4].split('需要')[1].split('各有至少一名')[0]
+                            owners1 = [x[1:] for x in period.split('及')[0].split('的 ')[1].split(' ')[:-1]]
+                            owners2 = [x[1:] for x in period.split('及')[1].split('的 ')[1].split(' ')[:-1]]
+                            owners1_agreement = False
+                            owners2_agreement = False
+                            for owner1 in owners1:
+                                if owner1 in pr_lgtm_lst:
+                                    owners1_agreement = True
+                            for owner2 in owners2:
+                                if owner2 not in owners1 and owner2 in pr_lgtm_lst:
+                                    owners2_agreement = True
+                            if owners1_agreement and owners2_agreement:
+                                edit_nums.append(item.split('|')[1])
+                        elif 'each SIG' in item:
+                            owners1 = [x[1:] for x in item.split('|')[4].split('one of')[1].split('of')[0].split(' ')[1:-1]]
+                            owners2 = [x[1:] for x in item.split('|')[4].split('one of')[2].split('of **')[0].split(' ')[1:-1]]
+                            owners1_agreement = False
+                            owners2_agreement = False
+                            for owner1 in owners1:
+                                if owner1 in pr_lgtm_lst:
+                                    owners1_agreement = True
+                            for owner2 in owners2:
+                                if owner2 not in owners1 and owner2 in pr_lgtm_lst:
+                                    owners2_agreement = True
+                            if owners1_agreement and owners2_agreement:
+                                edit_nums.append(item.split('|')[1])
+                        elif '至少两人' in item:
+                            owners =[x[1:] for x in item.split('需要')[1].split('中至少两人')[0].split(' ')[1:-1]]
+                            count = 0
+                            for owner in owners:
+                                if owner in pr_lgtm_lst:
+                                    count += 1
+                            if count >= 2:
+                                edit_nums.append(item.split('|')[1])
+                        elif 'At least two of' in item:
+                            owners = [x[1:] for x in item.split('At least two of')[1].split('must leave')[0].split(' ')[1:-1]]
+                            count = 0
+                            for owner in owners:
+                                if owner in pr_lgtm_lst:
+                                    count += 1
+                            if count >= 2:
+                                edit_nums.append(item.split('|')[1])
+                        else:
+                            edit_nums.append(item.split('|')[1])
+                if edit_nums:
+                    logger.info('The following item will be changed to be status "go": {}'.format(','.join(edit_nums)))
+                    edit_string = 'go:' + ','.join(edit_nums)
+                    p5 = Process(target=edit_review, args=(pr_url, edit_string))
+                    p5.start()
             if comment.startswith('/review '):
                 lines = comment.splitlines()
                 try:
@@ -82,3 +145,12 @@ class ReviewView(GenericAPIView):
                 except IndexError:
                     pass
         return JsonResponse({'code': 200, 'msg': 'OK'})
+
+
+def get_pr_lgtm_lst(user_gitee, owner, repo, number, review_id):
+    pr_lgtm_lst = []
+    all_comments = user_gitee.get_pr_comments_all(owner, repo, number)
+    for comment in all_comments:
+        if comment['id'] > review_id and '/lgtm' in comment['body'].split('\n'):
+            pr_lgtm_lst.append(comment['user']['login'])
+    return pr_lgtm_lst
