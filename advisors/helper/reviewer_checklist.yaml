@@ -197,3 +197,8 @@ customization:
     condition: sig-info-change
     claim: "增加/修改sig-info.yaml，要得到{sig}的维护者同意"
     explain: "需要 {maintainers} 中至少一人代表在此 PR 的 review 中留下 \"/lgtm\" 表示确认同意增加/修改sig-info.yaml。"
+  -
+    name: committer-check
+    condition: committer-change
+    claim: "committer的权限或其维护的仓库发生变更，要得到其同意"
+    explain: "需要 {committer} 在此 PR 的 review 中留下 \"/lgtm\" 表示确认同意其权限或维护的仓库发生变更。"

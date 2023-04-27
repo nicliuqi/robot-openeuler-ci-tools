@@ -710,6 +710,72 @@ def check_sig_information_changes():
     return sigs
 
 
+def check_committer_repo_changes():
+    """
+    return a list of committers need to notify
+    """
+    committers_changed_repos = {}
+    lst_files = subprocess.getoutput("git diff --name-status remotes/origin/master..")
+    for line in lst_files.splitlines():
+        status, item = line.split(maxsplit=1)
+        if status != "M":
+            continue
+        if item.startswith("sig/") and item.endswith("/sig-info.yaml"):
+            current_repos = yaml.load(open(item, 'r'), Loader=yaml.Loader).get('repositories')
+            remote_sig_info = subprocess.getoutput('git show remotes/origin/master:' + item)
+            remote_repos = yaml.load(remote_sig_info, Loader=yaml.Loader).get('repositories')
+            current_committers = {}
+            remote_committers = {}
+            for i in current_repos:
+                if 'committers' not in i.keys():
+                    continue
+                committers = [x['gitee_id'] for x in i['committers']]
+                for committer in committers:
+                    if committer not in current_committers.keys():
+                        current_committers[committer] = i['repo']
+                    else:
+                        for repo in i['repo']:
+                            current_committers[committer].append(repo)
+            for j in remote_repos:
+                if 'committers' not in j.keys():
+                    continue
+                committers = [x['gitee_id'] for x in j['committers']]
+                for committer in committers:
+                    if committer not in remote_committers.keys():
+                        remote_committers[committer] = j['repo']
+                    else:
+                        for repo in j['repo']:
+                            remote_committers[committer].append(repo)
+            for crt_committer in current_committers:
+                if crt_committer not in remote_committers.keys():
+                    committers_changed_repos[crt_committer] = current_committers[crt_committer]
+                else:
+                    for repo in current_committers[crt_committer]:
+                        if repo not in remote_committers[crt_committer]:
+                            if not committers_changed_repos.get(crt_committer):
+                                committers_changed_repos[crt_committer] = []
+                            committers_changed_repos[crt_committer].append(repo)
+            for rmt_committer in remote_committers:
+                if rmt_committer not in current_committers.keys():
+                    committers_changed_repos[rmt_committer] = remote_committers[rmt_committer]
+                else:
+                    for repo in remote_committers[rmt_committer]:
+                        if repo not in current_committers[rmt_committer]:
+                            if not committers_changed_repos.get(rmt_committer):
+                                committers_changed_repos[rmt_committer] = []
+                            committers_changed_repos[rmt_committer].append(repo)
+    return [('@' + x) for x in list(committers_changed_repos.keys())]
+
+
+def check_committer_change(info):
+    review_body = ""
+    committers = check_committer_repo_changes()
+    for committer in committers:
+        item = join_check_item(categorizer['customization'], info['claim'], info['explain'])
+        review_body += item.format(committer=committer)
+    return review_body
+
+
 def basic_review(cklist, branch):
     """
     basic review body
@@ -824,6 +890,8 @@ def community_review(custom_items):
             new_review_body = add_sig_info_review_body(review_body, sig_info_change_dict, cstm_item)
             if new_review_body:
                 review_body = new_review_body
+        elif cstm_item['condition'] == 'committer-change':
+            review_body += check_committer_change(cstm_item)
     return review_body
 
 
