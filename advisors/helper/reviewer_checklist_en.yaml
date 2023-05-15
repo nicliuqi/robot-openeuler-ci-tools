@@ -197,4 +197,8 @@ customization:
     condition: sig-info-change
     claim: "{sig} maintainer approval required for adding or modifying the sig-info.yaml file"
     explain: "At least one of {maintainers} must leave \"/lgtm\" in the PR review, indicating that the addition or modification is approved. "
-
+  -
+    name: committer-check
+    condition: committer-change
+    claim: "The requests for changes in a committer's permissions or in the repos maintained by a committer must be approved by the committer"
+    explain: "{committer} needs to comment \"/lgtm\" in this PR to confirm consent to the changes in the permissions or repos maintained."
