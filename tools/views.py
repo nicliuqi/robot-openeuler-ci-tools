@@ -66,9 +66,11 @@ class ReviewView(GenericAPIView):
             logger.info('Comment Body: {}'.format(comment))
             user_gitee = gitee.Gitee()
             owner, repo, number = pr_url.split('/')[3], pr_url.split('/')[4], pr_url.split('/')[6]
-            latest_review_comment = find_review_comment(user_gitee, owner, repo, number)
-            items = latest_review_comment['body'].splitlines()
             if '/lgtm' in comment.split('\n'):
+                latest_review_comment = find_review_comment(user_gitee, owner, repo, number)
+                if not latest_review_comment:
+                    return JsonResponse({'code': 200, 'msg': 'OK'})
+                items = latest_review_comment['body'].splitlines()
                 latest_review_comment_id = latest_review_comment['id']
                 commenter = data['comment']['user']['login']
                 edit_nums = []
