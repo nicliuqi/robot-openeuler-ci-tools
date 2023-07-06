@@ -139,7 +139,7 @@ class ReviewView(GenericAPIView):
                         for line in lines:
                             if line.strip().startswith("/review "):
                                 sets = line.strip().split(maxsplit=1)[1]
-                                sets = filter_review(sets, lgtm_items, len(items))
+                                sets = filter_review(sets, lgtm_items, len(lgtm_items))
                                 sets_li.append(sets)
                         contents = " ".join(sets_li)
                         if contents:
