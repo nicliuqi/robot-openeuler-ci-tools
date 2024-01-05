@@ -726,26 +726,28 @@ def check_committer_repo_changes():
             remote_repos = yaml.load(remote_sig_info, Loader=yaml.Loader).get('repositories')
             current_committers = {}
             remote_committers = {}
-            for i in current_repos:
-                if 'committers' not in i.keys():
-                    continue
-                committers = [x['gitee_id'] for x in i['committers']]
-                for committer in committers:
-                    if committer not in current_committers.keys():
-                        current_committers[committer] = i['repo']
-                    else:
-                        for repo in i['repo']:
-                            current_committers[committer].append(repo)
-            for j in remote_repos:
-                if 'committers' not in j.keys():
-                    continue
-                committers = [x['gitee_id'] for x in j['committers']]
-                for committer in committers:
-                    if committer not in remote_committers.keys():
-                        remote_committers[committer] = j['repo']
-                    else:
-                        for repo in j['repo']:
-                            remote_committers[committer].append(repo)
+            if current_repos:
+                for i in current_repos:
+                    if 'committers' not in i.keys():
+                        continue
+                    committers = [x['gitee_id'] for x in i['committers']]
+                    for committer in committers:
+                        if committer not in current_committers.keys():
+                            current_committers[committer] = i['repo']
+                        else:
+                            for repo in i['repo']:
+                                current_committers[committer].append(repo)
+            if remote_repos:
+                for j in remote_repos:
+                    if 'committers' not in j.keys():
+                        continue
+                    committers = [x['gitee_id'] for x in j['committers']]
+                    for committer in committers:
+                        if committer not in remote_committers.keys():
+                            remote_committers[committer] = j['repo']
+                        else:
+                            for repo in j['repo']:
+                                remote_committers[committer].append(repo)
             for crt_committer in current_committers:
                 if crt_committer not in remote_committers.keys():
                     committers_changed_repos[crt_committer] = current_committers[crt_committer]
