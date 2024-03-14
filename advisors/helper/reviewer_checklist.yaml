@@ -197,6 +197,10 @@ customization:
     condition: sig-info-change
     claim: "增加/修改sig-info.yaml，要得到{sig}的维护者同意"
     explain: "需要 {maintainers} 中至少一人代表在此 PR 的 review 中留下 \"/lgtm\" 表示确认同意增加/修改sig-info.yaml。"
+  - name: new-members-confirmation
+    condition: new-members-add
+    claim: "在sig-info.yaml中新增成员（maintainer, committer, repo_admin），要得到所有新增成员的同意"
+    explain: "需要 {new_members} 等所有人在此 PR 的 review 中留下 \"/lgtm\" 表示确认同意新增成员。"
   -
     name: committer-check
     condition: committer-change

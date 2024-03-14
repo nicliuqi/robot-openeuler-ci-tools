@@ -120,6 +120,28 @@ class Gitee():
                     % (err.code, err.reason, str(err.headers)))
             return False
 
+
+    def __delete_gitee(self, url, headers=None):
+        """
+        DELETE method to gitee API
+        """
+        if '?' in url:
+            new_url = url + "&"
+        else:
+            new_url = url + "?"
+        new_url = new_url + "access_token=" + self.token["access_token"]
+        if headers is None:
+            headers = self.headers.copy()
+        req = urllib.request.Request(url=new_url, headers=headers, method="DELETE")
+        try:
+            result = urllib.request.urlopen(req)
+            return result.read().decode("utf-8")
+        except urllib.error.HTTPError as err:
+            print("ERROR: error occurred.\nerrcode: %d\nreason: %s\nheaders:\n%s"
+                    % (err.code, err.reason, str(err.headers)))
+            return False
+
+
     def fork_repo(self, repo, owner="src-openeuler"):
         """
         Fork repository in gitee
@@ -188,6 +210,14 @@ class Gitee():
         values["body"] = body
         return self.__post_gitee(url, values)
 
+    def delete_pr_comment(self, owner, repo, comment_id):
+        """
+        Delete PR comment by comment id
+        """
+        url_template = "https://gitee.com/api/v5/repos/{owner}/{repo}/pulls/comments/{id}"
+        url = url_template.format(owner=owner, repo=repo, id=comment_id)
+        self.__delete_gitee(url)
+
     def get_pr_comments_all(self, owner, repo, number):
         """
         Get all comments of PR
@@ -242,6 +272,44 @@ class Gitee():
         url_template = "https://gitee.com/api/v5/repos/{owner}/{repo}/pulls/{number}"
         url = url_template.format(owner=owner, repo=repo, number=num)
         return self.__get_gitee_json(url)
+
+
+    def get_pr_labels_all(self, owner, repo, number):
+        """
+        Get all labels of PR
+        """
+        url_template = "https://gitee.com/api/v5/repos/{owner}/{repo}/pulls/{number}/labels"
+        url = url_template.format(owner=owner, repo=repo, number=number)
+        return self.__get_gitee_json(url)
+
+
+    def add_pr_labels(self, owner, repo, number, labels):
+        """
+        Add labels to a PR
+        """
+        url_template = "https://gitee.com/api/v5/repos/{owner}/{repo}/pulls/{number}/labels?access_token={access_token}"
+        url = url_template.format(owner=owner, repo=repo, number=number, access_token=self.token["access_token"])
+        headers = self.headers.copy()
+        headers["Content-Type"] = "application/json;charset=UTF-8"
+        data = json.dumps(labels).encode('utf-8')
+        req = urllib.request.Request(url=url, data=data, headers=headers, method="POST")
+        try:
+            result = urllib.request.urlopen(req)
+            return result.read().decode("utf-8")
+        except urllib.error.HTTPError as err:
+            print("ERROR: error occurred.\nerrcode: %d\nreason: %s\nheaders:\n%s"
+                  % (err.code, err.reason, str(err.headers)))
+            return False
+
+
+    def remove_pr_labels(self, owner, repo, number, labels):
+        """
+        Remove labels of a PR
+        """
+        url_template = "https://gitee.com/api/v5/repos/{owner}/{repo}/pulls/{number}/labels/{labels}"
+        url = url_template.format(owner=owner, repo=repo, number=number, labels=labels)
+        return self.__delete_gitee(url)
+
 
     def __get_gitee_json(self, url):
         """

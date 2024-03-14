@@ -120,6 +120,30 @@ class ReviewView(GenericAPIView):
                                     count += 1
                             if count >= 2:
                                 edit_nums.append(item.split('|')[1])
+                        elif '等所有人' in item:
+                            new_members = [x[1:] for x in item.split('需要')[1].split('等所有人')[0].split(' ')[1:-1]]
+                            count = 1
+                            for new_member in new_members:
+                                if new_member not in pr_lgtm_lst:
+                                    count = 0
+                                    break
+                            if count > 0:
+                                pr_labels = user_gitee.get_pr_labels_all(owner, repo, number)
+                                if 'wait_confirm' in [pr_label['name'] for pr_label in pr_labels]:
+                                    user_gitee.remove_pr_labels(owner, repo, number, 'wait_confirm')
+                                edit_nums.append(item.split('|')[1])
+                        elif 'approved by all members' in item:
+                            new_members = [x[1:] for x in item.split('All of')[1].split('need to comment')[0].split(' ')[1:-1]]
+                            count = 1
+                            for new_member in new_members:
+                                if new_member not in pr_lgtm_lst:
+                                    count = 0
+                                    break
+                            if count > 0:
+                                pr_labels = user_gitee.get_pr_labels_all(owner, repo, number)
+                                if 'wait_confirm' in [pr_label['name'] for pr_label in pr_labels]:
+                                    user_gitee.remove_pr_labels(owner, repo, number, 'wait_confirm')
+                                edit_nums.append(item.split('|')[1])
                         else:
                             edit_nums.append(item.split('|')[1])
                 if edit_nums:
